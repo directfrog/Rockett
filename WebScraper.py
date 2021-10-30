@@ -16,6 +16,33 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 from recipe_scrapers import scrape_me
 
+
+class ExtraScraper(object):
+    def cookpreptime(self, URL, preporcook):
+        page = str(list(requests.get(URL)))
+
+        print(page)
+
+        span = re.search(preporcook, page).span()
+        find_range = page[span[1]:span[1]+16]
+        print(find_range)
+        if re.search('b', find_range) != None:
+            span = re.search(preporcook, page[span[1]+16:len(page)]).span()
+        find_range = page[span[0]:span[1]+16]
+        print('FINAL FIND RANGE: ', find_range)
+        if re.search('PT', find_range) != None:
+            for index in range(len(find_range)):
+                if find_range[index] == 'T' and find_range[index-1] == 'P':
+                    break 
+            if 'H' in find_range and 'M' not in find_range:
+                time = int(find_range[index+1:find_range.index('H')])*60
+            if 'H' in find_range and 'M' in find_range:
+                time = find_range[find_range.index('H')-1]*60 + find_range[find_range.index('M')]
+            if 'H' not in find_range and 'M' in find_range:
+                time = find_range[index+1:find_range.index('M')]
+        return time
+
+
 def get_links(arr):
     links = []
     for x in range(len(arr)):
@@ -76,9 +103,7 @@ def run_scraper(alpha):
             if search_list[n][-4:len(search_list)] == 'link':
                 list_recipes.append(search_list[n][0:-8])
 
-    #print('LIST RECIPES: ', list_recipes)
-    #sys.exit()
-    #list_recipes = get_links(list_recipes[0])
+    print('LIST RECIPES: ', list_recipes)
 
     thread_local = threading.local()
     def get_session():
@@ -90,14 +115,17 @@ def run_scraper(alpha):
         session = get_session()
         recipe = str(url)
         scrape = scrape_me(recipe)
-        print('SCRAPE: ', recipe)
-        for x in range(4):
-            print(' ')
+        extrascraper = ExtraScraper()
+
+        print('RETURNED RECIPE LINK: ', recipe)
+        print('Scrape function: ', scrape)
         title = scrape.title()
-        total_time = scrape.total_time()
+        #total_time = extrascraper.cookpreptime(recipe, 'prepTime')+extrascraper.cookpreptime(recipe, 'cookTime')
+        #print('TOTAL TIME: ', total_time)
         ingredients = scrape.ingredients()
+        print('ingredients: ', ingredients)
         instructions = scrape.instructions()
-        return [title, len(ingredients), ingredients, instructions, total_time]
+        return [title, len(ingredients), ingredients, instructions] #, total_time
 
     def download_all_sites(sites):
         global title_links
@@ -109,9 +137,12 @@ def run_scraper(alpha):
             for task in as_completed(title_links):
                 title_names.append(task.result())
 
-
             return title_links, title_names
 
 
     title_links, data = download_all_sites(list_recipes)
+
+    print('TITLE LINKS: ', title_links)
+    print('data: ', data)
+    sys.exit()
     return title_links, data

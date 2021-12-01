@@ -91,7 +91,7 @@ class ResultsWindow(Screen):
 class RecipeWindow(Screen):
 	def on_enter(self):
 		print(f'SELECTED RESULT: ', selecected_result)
-		Label = MDLabel(text=selecected_result[0], haligh='centre')
+		Label = MDLabel(text=selecected_result[0], halign='center')
 		self.add_widget(Label)
 		
 
